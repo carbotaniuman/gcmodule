@@ -8,6 +8,15 @@ use std::panic;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
 #[test]
+fn test_roundtrip() {
+    let a: Cc<Vec<i32>> = Cc::new(vec![1, 2, 3]);
+    let ptr = Cc::into_raw(a);
+    let a = unsafe { Cc::from_raw(ptr) };
+    assert_eq!(*a, vec![1, 2, 3])
+}
+
+
+#[test]
 fn test_simple_untracked() {
     static DROPPED: AtomicBool = AtomicBool::new(false);
     struct X(&'static str);

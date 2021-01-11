@@ -16,6 +16,8 @@ quickcheck = { version = "0.9", default-features = false }
 [dependencies]
 gcmodule_derive = { version = "=0.3.3", optional = true, path = "gcmodule_derive" }
 parking_lot = { version = "0.10", optional = true }
+memoffset = "0.6.1"
+
 
 [features]
 default = ["derive", "sync"]

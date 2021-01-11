@@ -5,6 +5,7 @@ use crate::debug;
 use crate::ref_count::RefCount;
 use crate::trace::Trace;
 use crate::trace::Tracer;
+use memoffset::offset_of;
 use std::cell::UnsafeCell;
 use std::mem;
 use std::mem::ManuallyDrop;
@@ -192,6 +193,31 @@ impl<T: Trace, O: AbstractObjectSpace> RawCc<T, O> {
         }
         debug_assert_eq!(result.ref_count(), 1);
         result
+    }
+
+    /// Consumes the GCed pointer, returning the wrapped pointer.
+    ///
+    /// To avoid a memory leak the pointer must be converted back to a GCed pointer
+    /// using [`Self::from_raw`][from_raw].
+    pub fn into_raw(self) -> *const T {
+        let ptr = &**self.inner() as *const T;
+        mem::forget(self);
+        ptr
+    }
+
+    /// Constructs the GCed pointer from a raw pointer.
+    ///
+    /// The raw pointer must have been previously returned by a call to
+    /// [`Self::into_raw`][into_raw].
+    pub unsafe fn from_raw(ptr: *const T) -> Self {
+        let ptr = {
+            let byte_ptr = ptr as *const _ as *const u8;
+            // SAFETY: the caller must provide a valid pointer
+            byte_ptr.offset(-(offset_of!(RawCcBox<T, O>, value) as isize)) as *mut RawCcBox<T, O>
+        };
+        // SAFETY: the caller must provide a valid pointer, which must not be null,
+        // or evaluate to null from the arithmetic above
+        Self(NonNull::new_unchecked(ptr))
     }
 
     /// Convert to `RawCc<dyn Trace>`.
